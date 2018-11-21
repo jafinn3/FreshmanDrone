@@ -1,0 +1,12 @@
+This file is used to calibrate
+PROCESS:
+
+Upload the file
+Type 1
+Connect Battery
+Wait for the three beeps
+Wait for the two beeps
+Type 0
+Wait for the two beeps (Beeps correspond to the number of cells in battery)
+Wait for the long beep
+Type 2
