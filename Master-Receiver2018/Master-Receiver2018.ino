@@ -36,6 +36,25 @@ Servo motA, motB, motC, motD; // Creating the four servos we will use on the dro
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
 
+
+
+/*********** INTEGRATING NEW CODE ***********/
+
+//thrust corresponds to a CHANGE in motor speed
+int thrust1 = 0;
+int thrust2 = 0;
+int thrust3 = 0;
+int thrust4 = 0;
+//adjust to JS
+const int highBreak = 525;
+const int lowBreak = 475;
+//adjust to copter
+const int hoverSpeed = 750;
+const int maxSpeed = 1000;
+const int range = 100;
+
+
+
 void setup() 
 {
   //Setting up the serial
@@ -43,11 +62,13 @@ void setup()
 
   //Attaching the motors to their pins
   delay(3000);
-  motA.attach(SERVO_PIN_1, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
-  motB.attach(SERVO_PIN_2, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+  motA.attach(SERVO_PIN_2, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+  motB.attach(SERVO_PIN_1, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
   motC.attach(SERVO_PIN_3, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
   motD.attach(SERVO_PIN_4, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+  
   delay(1000);
+  
   
   //Initializing the radio
   pinMode(RFM69_RST, OUTPUT);
@@ -84,7 +105,7 @@ void setup()
 }
 
 int adjustValue(int value){
-  if(value > 1000)
+  if(value > 1023)
     return 1000;
   if(value < 0)
     return 0;
@@ -108,47 +129,175 @@ void loop() {
       int joystickValues[4]; //Initializing the int[] which will store the values we encoded in 10 bits
 
       // Getting the actual values from the 40 bits that were sent. Need to shift the values appropriately to get the currect bits.
-      joystickValues[0] = (int)((((uint16_t)(buff[0]) << 2) & 0x3FF) | (buff[1] >> 6)); //LeftX Joystick
-      joystickValues[1] = (int)((((uint16_t)(buff[1]) << 4) & 0x3FF) | (buff[2] >> 4)); //LeftY Joystick
-      joystickValues[2] = (int)((((uint16_t)(buff[2]) << 6) & 0x3FF) | (buff[3] >> 2)); //RightX Joystick
-      joystickValues[3] = (int)((((uint16_t)(buff[3]) << 8) & 0x3FF) | (buff[4]));      //RightY Joystick
+      joystickValues[0] = (int)((((uint16_t)(buff[0]) << 2) & 0x3FF) | (buff[1] >> 6)); //RightX Joystick
+      joystickValues[1] = (int)((((uint16_t)(buff[1]) << 4) & 0x3FF) | (buff[2] >> 4)); //RightY Joystick
+      joystickValues[2] = (int)((((uint16_t)(buff[2]) << 6) & 0x3FF) | (buff[3] >> 2)); //LeftX Joystick
+      joystickValues[3] = (int)((((uint16_t)(buff[3]) << 8) & 0x3FF) | (buff[4]));      //LeftY Joystick
 
-      Serial.print("Left X: ");
-      Serial.println(joystickValues[0]);
-      Serial.print("Left Y: ");
-      Serial.println(joystickValues[1]);
       Serial.print("Right X: ");
-      Serial.println(joystickValues[2]);
+      Serial.println(joystickValues[0]);
       Serial.print("Right Y: ");
+      Serial.println(joystickValues[1]);
+      Serial.print("Left X: ");
+      Serial.println(joystickValues[2]);
+      Serial.print("Left Y: ");
       Serial.println(joystickValues[3]);
 
-      //The values being sent across in the joystickValues array must be between 0 - 1000
+      //The values being sent across in the joystickValues array must be between 0 - 1023
       //If they are not, we will change the values accordingly
       joystickValues[0] = adjustValue(joystickValues[0]);
       joystickValues[1] = adjustValue(joystickValues[1]);
       joystickValues[2] = adjustValue(joystickValues[2]);
       joystickValues[3] = adjustValue(joystickValues[3]);
+      
+      //Joystick Software
+      int RightXVal = joystickValues[0];
+      int RightYVal = joystickValues[1];
+      int LeftXVal = joystickValues[2];
+      int LeftYVal = joystickValues[3];
 
+      //Initialize Hover
+      thrust1 = 0;
+      thrust2 = 0;
+      thrust3 = 0;
+      thrust4 = 0;
+    
+      //LEFT JOYSTICK
+      //Climb
+      if(LeftYVal >= highBreak)
+      {
+        thrust1 = map(LeftYVal, highBreak, 1023, 0, range);
+        thrust2 = map(LeftYVal, highBreak, 1023, 0, range);
+        thrust3 = map(LeftYVal, highBreak, 1023, 0, range);
+        thrust4 = map(LeftYVal, highBreak, 1023, 0, range);
+        Serial.println("Climb");
+      }
+      //Descend
+      else if(LeftYVal <= lowBreak)
+      {
+        thrust1 = -map(LeftYVal, 0, lowBreak, range, 0);
+        thrust2 = -map(LeftYVal, 0, lowBreak, range, 0);
+        thrust3 = -map(LeftYVal, 0, lowBreak, range, 0);
+        thrust4 = -map(LeftYVal, 0, lowBreak, range, 0);
+        Serial.println("Descend");
+      }
+      //Yaw R
+      else if(LeftXVal >= highBreak)
+      {
+        thrust1 = map(LeftXVal, highBreak, 1023, 0, range);
+        thrust2 = -map(LeftXVal, highBreak, 1023, 0, range);
+        thrust3 = map(LeftXVal, highBreak, 1023, 0, range);
+        thrust4 = -map(LeftXVal, highBreak, 1023, 0, range);;
+        Serial.println("Yaw R");
+      }
+      //Yaw L
+      else if(LeftXVal <= lowBreak)
+      {
+        thrust2 = map(LeftXVal, 0, lowBreak, range, 0);
+        thrust1 = -map(LeftXVal, 0, lowBreak, range, 0);
+        thrust3 = -map(LeftXVal, 0, lowBreak, range, 0);
+        thrust4 = map(LeftXVal, 0, lowBreak, range, 0);
+        Serial.println("Yaw L");
+      }
+
+      //Check the left joystick for movement, if there is something outside the deadzone, we will take that raw value, then check the right joystick
+      //Now when we are checking the right joystick, we will look to see if the left joystick was outside the deadzone by seeing if the trust has changed(Originally 0)
+      //If the thrust didn't change, then we want to set the thrust to the raw value of the right joystick,
+      //If the trust did change in the left joystick, then we want to set the thrust to .5 left + .5 right raw values so that we never go over the max range
+
+      //RIGHT JOYSTICK
+      //Pitch FWD
+      if(RightYVal >= highBreak)
+      {
+        if(thrust1 == 0){
+          thrust3 = map(RightYVal, highBreak, 1023, 0, range);
+          thrust1 = -map(RightYVal, highBreak, 1023, 0, range);
+          thrust2 = -map(RightYVal, highBreak, 1023, 0, range);
+          thrust4 = map(RightYVal, highBreak, 1023, 0, range);
+        }else{
+          thrust3 = .5*(thrust3) + .5*(map(RightYVal, highBreak, 1023, 0, range));
+          thrust1 = .5*(thrust1) + .5*(-map(RightYVal, highBreak, 1023, 0, range));
+          thrust2 = .5*(thrust2) + .5*(-map(RightYVal, highBreak, 1023, 0, range));
+          thrust4 = .5*(thrust4) + .5*(map(RightYVal, highBreak, 1023, 0, range));
+        }
+        Serial.println("Pitch FWD");
+      }
+      //Pitch REV
+      else if(RightYVal <= lowBreak)
+      {
+        if(thrust1 == 0){
+          thrust1 = map(RightYVal, 0, lowBreak, range, 0);
+          thrust2 = map(RightYVal, 0, lowBreak, range, 0);
+          thrust3 = -map(RightYVal, 0, lowBreak, range, 0);
+          thrust4 = -map(RightYVal, 0, lowBreak, range, 0);
+        }else{
+          thrust1 = .5*(thrust1) + .5*(map(RightYVal, 0, lowBreak, range, 0));
+          thrust2 = .5*(thrust2) + .5*(map(RightYVal, 0, lowBreak, range, 0));
+          thrust3 = .5*(thrust3) + .5*(-map(RightYVal, 0, lowBreak, range, 0));
+          thrust4 = .5*(thrust4) + .5*(-map(RightYVal, 0, lowBreak, range, 0));
+        }
+        Serial.println("Pitch REV");
+      }
+      //Roll R
+      else if(RightXVal >= highBreak)
+      {
+        if(thrust1 == 0){
+          thrust1 = map(RightXVal, highBreak, 1023, 0, range);
+          thrust2 = -map(RightXVal, highBreak, 1023, 0, range);
+          thrust3 = -map(RightXVal, highBreak, 1023, 0, range);
+          thrust4 = map(RightXVal, highBreak, 1023, 0, range);
+        }else{
+          thrust1 = .5*(thrust1) + .5*(map(RightXVal, highBreak, 1023, 0, range));
+          thrust2 = .5*(thrust2) + .5*(-map(RightXVal, highBreak, 1023, 0, range));
+          thrust3 = .5*(thrust3) + .5*(-map(RightXVal, highBreak, 1023, 0, range));
+          thrust4 = .5*(thrust4) + .5*(map(RightXVal, highBreak, 1023, 0, range));
+        }
+        Serial.println("Roll R");
+      }
+      //ROll L
+      else if(RightXVal <= lowBreak)
+      {
+        if(thrust1 == 0){
+          thrust2 = map(RightXVal, 0, lowBreak, range, 0);
+          thrust1 = -map(RightXVal, 0, lowBreak, range, 0);
+          thrust3 = map(RightXVal, 0, lowBreak, range, 0);
+          thrust4 = -map(RightXVal, 0, lowBreak, range, 0);
+        }else{
+          thrust2 = .5*(thrust2) + .5*(map(RightXVal, 0, lowBreak, range, 0));
+          thrust1 = .5*(thrust1) + .5*(-map(RightXVal, 0, lowBreak, range, 0));
+          thrust3 = .5*(thrust3) + .5*(map(RightXVal, 0, lowBreak, range, 0));
+          thrust4 = .5*(thrust4) + .5*(-map(RightXVal, 0, lowBreak, range, 0));
+        }
+        Serial.println("Roll L");
+      }
       //Insert accelerometer/gyro adjustments
-
+      thrust1 = 1000 + hoverSpeed + thrust1
+      thrust2 = 1000 + hoverSpeed + thrust2
+      thrust3 = 1000 + hoverSpeed + thrust3
+      thrust4 = 1000 + hoverSpeed + thrust4
+      Serial.print("Motor 1:")
+      Serial.println(thrust1);
+      Serial.print("Motor 2: ");
+      Serial.println(thrust2);
+      Serial.print("Motor 3: ");
+      Serial.println(thrust3);
+      Serial.print("Motor 4: ");
+      Serial.println(thrust4);
 
       //Writing the values to the motors
-//      motA.writeMicroseconds(1000 + joystickValues[0]);
-//      motB.writeMicroseconds(1000 + joystickValues[1]);
-//      motC.writeMicroseconds(1000 + joystickValues[2]);
-//      motD.writeMicroseconds(1000 + joystickValues[3]);
-//      
-//      delay(1000);
-      
+      motA.writeMicroseconds(thrust1);
+      motB.writeMicroseconds(thrust2);
+      motC.writeMicroseconds(thrust3);
+      motD.writeMicroseconds(thrust4);
       
       Serial.print("Radio Strength: ");
       Serial.println(rf69.lastRssi(), DEC);
 
       //Sending a response back to the controller( The response will be one character, R --> Received )
-      uint8_t data[] = "R";
-      rf69.send(data, sizeof(data));
-      rf69.waitPacketSent();
-      Serial.println("Response just sent");      
+//      uint8_t data[] = "R";
+//      rf69.send(data, sizeof(data));
+//      rf69.waitPacketSent();
+//      Serial.println("Response just sent");      
     } else {
       Serial.println("Receive failed");
     }

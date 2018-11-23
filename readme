@@ -1,0 +1,6 @@
+Drone Project -- Version Fall 2018
+
+The calibrating file will allow the arduino to calibrate the motors --> View the readme for that file specifically
+
+The RadioHead-Master is the library needed to use the radio
+	This library needs to be changed because of the conflict with Servo
