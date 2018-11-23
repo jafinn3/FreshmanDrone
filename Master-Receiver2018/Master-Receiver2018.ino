@@ -49,11 +49,9 @@ int thrust4 = 0;
 const int highBreak = 525;
 const int lowBreak = 475;
 //adjust to copter
-const int hoverSpeed = 750;
+const int hoverSpeed = 50;
 const int maxSpeed = 1000;
 const int range = 100;
-
-
 
 void setup() 
 {
@@ -104,11 +102,11 @@ void setup()
   //Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 }
 
-int adjustValue(int value){
-  if(value > 1023)
-    return 1000;
-  if(value < 0)
-    return 0;
+int adjustValue(int value, int highConstraint, int lowConstraint){
+  if(value > highConstraint)
+    return highConstraint;
+  if(value < lowConstraint)
+    return lowConstraint;
   return value;
 }
 
@@ -145,10 +143,10 @@ void loop() {
 
       //The values being sent across in the joystickValues array must be between 0 - 1023
       //If they are not, we will change the values accordingly
-      joystickValues[0] = adjustValue(joystickValues[0]);
-      joystickValues[1] = adjustValue(joystickValues[1]);
-      joystickValues[2] = adjustValue(joystickValues[2]);
-      joystickValues[3] = adjustValue(joystickValues[3]);
+      joystickValues[0] = adjustValue(joystickValues[0], 1023, 0);
+      joystickValues[1] = adjustValue(joystickValues[1], 1023, 0);
+      joystickValues[2] = adjustValue(joystickValues[2], 1023, 0);
+      joystickValues[3] = adjustValue(joystickValues[3], 1023, 0);
       
       //Joystick Software
       int RightXVal = joystickValues[0];
@@ -271,11 +269,18 @@ void loop() {
         Serial.println("Roll L");
       }
       //Insert accelerometer/gyro adjustments
-      thrust1 = 1000 + hoverSpeed + thrust1
-      thrust2 = 1000 + hoverSpeed + thrust2
-      thrust3 = 1000 + hoverSpeed + thrust3
-      thrust4 = 1000 + hoverSpeed + thrust4
-      Serial.print("Motor 1:")
+      thrust1 = 1000 + hoverSpeed + thrust1;
+      thrust2 = 1000 + hoverSpeed + thrust2;
+      thrust3 = 1000 + hoverSpeed + thrust3;
+      thrust4 = 1000 + hoverSpeed + thrust4;
+
+      thrust1 = adjustValue(thrust1, 2000, 1000);
+      thrust2 = adjustValue(thrust2, 2000, 1000);
+      thrust3 = adjustValue(thrust3, 2000, 1000);
+      thrust4 = adjustValue(thrust4, 2000, 1000);
+
+      
+      Serial.print("Motor 1:");
       Serial.println(thrust1);
       Serial.print("Motor 2: ");
       Serial.println(thrust2);
