@@ -1,0 +1,14 @@
+In order to run this program, you will have to manually change the TIMER which is being used by the Radiohead library.
+	Steps:
+	1. Navigate to the folder where your libaries are stored ( For me it was /home/jeremy/Arduino/libraries/ )
+	2. Now, enter the Radiohead-Master library folder
+	3. Locate the RH_ASK.cpp folder and find the text that says
+
+		// RH_ASK on Arduino uses Timer 1 to generate interrupts 8 times per bit interval
+		// Define RH_ASK_ARDUINO_USE_TIMER2 if you want to use Timer 2 instead of Timer 1 on Arduino
+		// You may need this to work around other librraies that insist on using timer 1
+		// Should be moved to header file
+		//#define RH_ASK_ARDUINO_USE_TIMER2
+
+	4. Uncomment the last line, #define RH_ASK_ARDUINO_USE_TIMER2 and save the file.
+
